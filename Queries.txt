@@ -1,0 +1,118 @@
+CREATE TABLE Persons (
+	nid char(10),
+	primaryName varchar(128),
+	birthYear int,
+	deathYear int,
+	primaryProfession varchar(128),
+	knownForTitles varchar(128));
+	
+Select * FROM Persons
+
+CREATE TABLE Titles (
+	tid char(10),
+	ttype varchar(12),
+	primaryTitle varchar(1024),
+	originalTitle varchar(1024),
+	isAdult int,
+	startYear int,
+	endYear int,
+	runtimeMinutes int,
+	genres varchar(256));
+	
+SELECT * FROM Titles LIMIT 100;
+
+DROP TABLE IF EXISTS Principals;
+CREATE TABLE Principals (
+	tid char(10),
+	ordering int,
+	nid char(10),
+	category varchar(32),
+	job varchar(512),
+	characters varchar(2048));
+	
+SELECT * FROM Principals LIMIT 100;	
+	
+COPY principals 
+FROM 'C:\temp\title.principals.tsv\data.tsv' NULL '\N' HEADER ENCODING 'UTF8' 
+	
+CREATE TABLE Ratings (
+        tid char(10),
+        avg_rating numeric,
+        num_votes numeric);
+	
+SELECT * FROM Ratings LIMIT 100;		
+
+COPY ratings
+FROM 'C:\temp\title.ratings.tsv\data.tsv' NULL '\N' HEADER ENCODING 'UTF8' 
+	
+	
+SELECT * FROM Ratings LIMIT 10;	
+SELECT * FROM Principals LIMIT 10;		
+SELECT * FROM persons LIMIT 10;
+SELECT * FROM titles LIMIT 10;		
+	
+	
+	
+CREATE TABLE Movie(
+    tid char(10),
+    title varchar(1024),
+    year int,
+    length int,
+    rating numeric
+);
+
+CREATE TABLE Director(
+    nid char(10),
+    name varchar(128),
+    birthYear int,
+    deathYear int
+);
+
+	
+	
+CREATE TABLE Actor(
+    nid char(10),
+    name varchar(128),
+    birthYear int,
+    deathYear int
+);	
+
+SELECT * FROM Actor LIMIT 100
+-----------------------------------------------------------------------------
+INSERTING VALUES INTO NEW TABLES
+-----------------------------------------------------------------------------
+INSERT INTO actor (
+select DISTINCT 
+    pp.nid AS nid,
+    pp.primaryName AS name,
+    pp.birthYear AS birthYear,
+    pp.deathYear AS deathYear	  
+from persons pp
+join principals p on pp.nid=p.nid
+join movie m on  p.tid=m.tid
+where p.category='actor' or p.category='actress'
+)
+
+INSERT INTO director 
+(select DISTINCT 
+    pp.nid AS nid,
+    pp.primaryName AS name,
+    pp.birthYear AS birthYear,
+    pp.deathYear AS deathYear					  
+from persons pp
+join principals p on pp.nid=p.nid
+join movie m on  p.tid=m.tid
+where p.category='director'
+)	
+
+
+INSERT INTO movie(
+select DISTINCT t.tid as tid, primarytitle as title, startyear as year, runtimeminutes as length, r.avg_rating as rating from titles t 
+join ratings r 
+on t.tid=r.tid 
+where t.ttype = 'movie' AND r.num_votes<=10000 
+group by t.tid, primarytitle, startyear, runtimeminutes, r.avg_rating
+order by avg_rating DESC
+LIMIT 5000
+)
+-----------------------------------------------------------------------------
