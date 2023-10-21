@@ -93,7 +93,7 @@ INSERT INTO movie(
 select DISTINCT t.tid as tid, primarytitle as title, startyear as year, runtimeminutes as length, r.avg_rating as rating from titles t 
 join ratings r 
 on t.tid=r.tid 
-where t.ttype = 'movie' AND r.num_votes<=10000 
+where t.ttype = 'movie' AND r.num_votes=10000 
 group by t.tid, primarytitle, startyear, runtimeminutes, r.avg_rating
 order by avg_rating DESC
 LIMIT 5000
@@ -138,6 +138,43 @@ where p.category='actor' or p.category='actress'
 ```
 ![Alt text](image-8.png)
 
+### Part D
+
+It's needed to determine a set of *non-trivial functional* dependencies (FDs) (recall that the *primary key* of a table already determines all other attributes, but there may be more dependencies but there may be more dependencies in the "real world").
+Based on these FDs, determine the *keys* and *normal forms* for each of your relations.
+
+- ***Movie***
+    
+    {tid} -> {title, year, length, rating}
+
+    {tid,title} -> {year,length, rating}
+
+
+- ***Director***
+    
+    {nid} -> {name, birthYear, deathYear}
+
+- ***Actor***
+
+    {nid} -> {name, birthYear, deathYear}
+
+-----
+**First Normal Form**
+- Is in the (1NF) iff all atributes values of every tuple are atomic. ***It's in the 1NF***
+
+**Second Normal Form**
+- Iff for every non-trivial FD X -> Y in F it holds that X is not a proper subset of a key of R or Y is an attribute of a key of R. ***It's in the 2NF***
+
+**Third Normal Form**
+- Iff for every non-trivial FD X -> Y in  it holds that X is a superkey of R or Y is an attribute of a key of R. ***It's in the 3NF***
+
+------
+## Problem 2
+
+### Part A
+Apply *PRIMARY KEY* and *FOREIGN KEY* constraints in SQL to the target schema and use *ON UPDATE CASCADE* and *DELETE CASCADE* policies for all foreign keys
+
+To start with this we have to ***ALTER*** the tables
 
 
 
@@ -145,7 +182,63 @@ where p.category='actor' or p.category='actress'
 
 
 
+## Problem 3 
+a) Select the most popular directors based on how many movies they directed, stop after the top 25 directors with the most movies. Also make sure to only return those directors which never appeared as an actor in any movie. 
 
+The first one is solved with the next querie: 
+```SQL
+SELECT name, COUNT(movieid)
+FROM Director 
+JOIN DirectedBy ON directorid=nid
+WHERE Director.nid NOT IN (
+	SELECT directorID 
+	FROM Directedby
+	JOIN ActorinMovie ON directorID=actorID
+)
+GROUP BY name
+ORDER BY COUNT desc
+LIMIT 25
+```
+And it gives the next result
+
+![Alt text](image-10.png)
+
+------
+We have now the next problem:
+b) Select the top 25 pairs of actors that occur together in a same movie, ordered by the number of
+movies in which they co-occur. 
+
+```SQL
+SELECT A.name AS name_actor_1, B.name AS name_actor_2, COUNT(*) AS co_occurrences
+FROM ActorinMovie AS A1
+JOIN ActorinMovie AS A2 ON A1.movieID = A2.movieID AND A1.actorID < A2.actorID
+JOIN Actor AS A ON A1.actorID = A.nid
+JOIN Actor AS B ON A2.actorID = B.nid
+GROUP BY A.name, B.name
+ORDER BY co_occurrences DESC
+LIMIT 25;
+```
+Givng us the next result:
+
+![Alt text](image-11.png)
+
+-------
+
+(c) Find frequent 2-itemsets of actors or directors who occurred together in at least 4 movies (using the
+A-Priori Step #1)
+
+```SQL
+WITH ActorDirectorPairs AS (
+    SELECT A.actorID AS ActorID, D.directorID AS DirectorID,A.movieID AS movieID
+    FROM ActorinMovie AS A
+    JOIN DirectedBy AS D ON A.movieID = D.movieID
+)
+SELECT ActorID, DirectorID, COUNT(DISTINCT movieID) AS co_occurrences
+FROM ActorDirectorPairs
+GROUP BY ActorID, DirectorID
+HAVING COUNT(DISTINCT movieID) >= 4
+ORDER BY co_occurrences DESC
+```
 
 
 
