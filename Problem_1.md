@@ -53,7 +53,7 @@ Now we have to create an E/R schema as follows:
 
 And insert the data from the first 4 tables created in **PART A**; we must omit any form of keys and constraints in this step and also we must inlcude the datatypes of the attributes given in the queries from ***PART A***
 
-*TABLE: MOVIE*
+***TABLE: MOVIE***
 ```SQL
 CREATE TABLE Movie(
     tid char(10),
@@ -174,12 +174,76 @@ Based on these FDs, determine the *keys* and *normal forms* for each of your rel
 ### Part A
 Apply *PRIMARY KEY* and *FOREIGN KEY* constraints in SQL to the target schema and use *ON UPDATE CASCADE* and *DELETE CASCADE* policies for all foreign keys
 
-To start with this we have to ***ALTER*** the tables
+To do this we need to create 2 new tables as follows:
 
+![Alt text](image-13.png)
 
+This let us create foreign keys between the main 3 tables.
 
+This is the code to create the two new tables:
+```SQL
+CREATE TABLE DirectedBy (
+  directorID char(10),
+  movieID char(10)
+);
 
+CREATE TABLE ActorinMovie (
+  actorID char(10),
+  movieID char(10)
+);
 
+```
+Now lets create the *PRIMARY KEYS* 
+
+```SQL
+ALTER TABLE Movie ADD CONSTRAINT pk_movie  PRIMARY KEY(tid)
+ALTER TABLE Actor ADD CONSTRAINT pk_actor  PRIMARY KEY(nid);
+ALTER TABLE Director ADD CONSTRAINT pk_diretor  PRIMARY KEY(nid);
+ALTER TABLE directedby ADD CONSTRAINT pk_directed  PRIMARY KEY(directorid,movieid);
+ALTER TABLE actorinmovie ADD CONSTRAINT pk_actor_movie  PRIMARY KEY(actorid, movieid);
+```
+
+It's important to say that the **DirectedBy** and **ActorinMovie** tables both of the attributes need to be *Primary keys*
+
+Now lets create the *FOREIGN KEYS*
+
+```SQL
+ALTER TABLE ActorinMovie ADD CONSTRAINT fk_actor_actor FOREIGN KEY(actorid) REFERENCES Actor(nid) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE ActorinMovie ADD CONSTRAINT fk_actor_movie FOREIGN KEY(movieID) REFERENCES movie(tid) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE DirectedBy ADD CONSTRAINT fk_director_director FOREIGN KEY(directorid) REFERENCES Director(nid) ON UPDATE CASCADE ON DELETE CASCADE;
+ALTER TABLE DirectedBy ADD CONSTRAINT fk_director_movie FOREIGN KEY(movieID) REFERENCES movie(tid) ON UPDATE CASCADE ON DELETE CASCADE;
+```
+
+As seen in the new diagram, we are going to place the *FOREIGN KEYS* only in the two new tables (DirectedBy, ActorinMovie).
+
+### Part B
+Verify the cascading behaviour of your foreign keys by updating the nid of director 'Steven Spielberg' to '123456789'
+```SQL
+SELECT * FROM Director WHERE name = 'Steven Spielberg';
+UPDATE Director SET nid='123456789' WHERE NAME='Steven Spielberg';
+SELECT * FROM Director WHERE NAME='Steven Spielberg';
+SELECT * FROM DirectedBy WHERE Directorid='123456789';
+---- Its updated on both tables
+```
+### Part C
+Verify the cascading behaviour of your foreign keys by deleting the actor and director 'Robert De Niro'
+```SQL
+SELECT * FROM Actor WHERE name='Robert De Niro';
+SELECT * FROM Director WHERE name='Robert De Niro'; --doesnt exists
+DELETE FROM Actor WHERE name='Robert De Niro';
+SELECT * FROM ActorinMovie WHERE actorid='nm0000134'
+```
+### Part D
+Show an insertion that is not allowed according to your foreign keys (i.e., the database should throw an exception when the insertion is attempted)
+```SQL
+INSERT INTO ActorinMovie VALUES ('123456789', '987654321')
+```
+### Part E
+ Show an update that is not allowed according to your foreign keys (i.e., the database should throw an exception when the update is attempted).
+
+ ```SQL
+ UPDATE DirectedBy SET directorid='999999' WHERE Directorid='123456789';
+ ```
 
 
 ## Problem 3 
@@ -240,10 +304,34 @@ HAVING COUNT(DISTINCT movieID) >= 4
 ORDER BY co_occurrences DESC
 ```
 
+-----
+d) Find frequent 3-itemsets of actors or directors who occurred together in at least 4 movies (using the A-Priori Step #2)
 
 
+```SQL
+WITH ActorDirectorCombos AS (
+  SELECT A.nid AS actor, D.nid AS director, AM.movieID
+  FROM ActorinMovie AS AM
+  JOIN Actor AS A ON AM.actorID = A.nid
+  JOIN Movie AS M ON AM.movieID = M.tid
+  JOIN DirectedBy AS DB ON M.tid = DB.movieID
+  JOIN Director AS D ON DB.directorID = D.nid
+  WHERE A.nid < D.nid
+),
+ComboCounts AS (
+  SELECT actor, director, COUNT(DISTINCT movieID) AS co_occurrences
+  FROM ActorDirectorCombos
+  GROUP BY actor, director
+)
+SELECT A.name AS actor_name, D.name AS director_name, AD.co_occurrences
+FROM ComboCounts AS AD
+JOIN Actor AS A ON AD.actor = A.nid
+JOIN Director AS D ON AD.director = D.nid
+WHERE AD.co_occurrences >= 4;
+```
 
-
+This give us the next result:
+![Alt text](image-12.png)
 
 
 

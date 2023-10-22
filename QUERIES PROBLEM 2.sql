@@ -141,3 +141,8 @@ INSERT INTO ActorinMovie VALUES ('123456789', '987654321')
 
 ---2.e
 UPDATE DirectedBy SET directorid='999999' WHERE Directorid='123456789';
+
+
+
+
+
